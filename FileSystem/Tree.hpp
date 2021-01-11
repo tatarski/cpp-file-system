@@ -328,6 +328,7 @@ inline void Tree<T>::TreeIterator::addChild(T data) {
 	}
 }
 
+// See whether TreeIterator is linked to a tree
 template<typename T>
 inline bool Tree<T>::TreeIterator::isDetached() {
 	return tree == nullptr || cur == nullptr;

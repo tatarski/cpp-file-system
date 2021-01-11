@@ -6,6 +6,8 @@
 #include<string>
 #include<stack>
 using namespace std;
+
+// Constants used by FileSystem.hpp and FileSystemCLI.cpp
 const char PATH_ROOT_SYM = '/';
 const char PATH_DIR_SEP = '/';
 const string PATH_UP_STR = "..";
@@ -17,6 +19,46 @@ const string NODE_PARENT_INDEX_BEGIN_FLAG = "PARENT_INDEX_ARRAY:";
 const string DIRECTORY_TYPE_STR = "dir";
 const string CAT_REDIRECT_STR = ">";
 const char END_OF_INPUT_CH = '.';
+const string END_OF_INPUT_STR = ".";
+const string SYMLINK_TYPE_STR = "symlink";
+
+const string MAN_STR =   "MANUAL: \n PATHS: \n"
+"<path>								\n"
+"/ abs / path												\n"
+"rel / path													\n"
+"Supports use of . and ..									\n"
+"Supports symlinks.											\n\n\n"
+"															\n"
+"# pwd														\n"
+"Print working directory									\n"
+"															\n"
+"# cd <path_to_dir>											\n"
+"Change current working directory.							\n"
+"															\n"
+"# ls <path_to_dir>											\n"
+"Print directory											\n"
+"															\n"
+"# cat <path_to_file>[*n][> ][path_to_output]				\n"
+"Concatenate files and paste them onto output file.			\n"
+"															\n"
+"# cp <path_to_file>[*n] <path_to_dir>						\n"
+"Copy files to directory.									\n"
+"															\n"
+"# rm <path_to_file>[*n]									\n"
+"Remove files.												\n"
+"															\n"
+"# mkdir <path_to_dir>[*n]									\n"
+"Create one or more directories.							\n"
+"															\n"
+"# rmdir <path_to_dor>[*n]									\n"
+"Remove one or more directories.							\n"
+"															\n"
+"# ln <path_to_file> <new_name>								\n"
+"Create a symlink to a file with a given path and new name.	\n"
+"															\n"
+"# stat <path_to_file>[*n]									\n"
+"Print metadata information for files.						\n";
+// Filesystem is Tree<FileSystemNode>
 struct FileSystemNode {
 	unsigned int id;
 	unsigned int size;
@@ -35,6 +77,7 @@ struct FileSystemNode {
 class FileSystem {
 private:
 	Tree<FileSystemNode> fs;
+	// Current working directory is iterator
 	Tree<FileSystemNode>::TreeIterator cur;
 	int file_count;
 
@@ -44,175 +87,67 @@ private:
 	// Extracts data read from DB file
 	// Fills treeNodeDataList and parentIndexArray with values taken from file
 	void extractFSFromFile(vector<FileSystemNode>& treeNodeDataList, vector<int>& parentIndexArray, ifstream& f);
+	// Fill childrenOf with data from parentIndexArray
 	void getChildrenArray(vector<int>& parentIndexArray, vector<vector<int>>& childrenOf);
 	// Traverses tree and calls cur.addChild for each child a node
 	void constructTreeWith(vector<int>& parentIndexArray, vector<vector<int>> childrenOf, vector<FileSystemNode>& treeNodeDataList);
 	// Returns iterator on folder, found by tracing a path of string representing directory names
 	// If path cannot be traced - returns detachhed empty TreeIterator
 	Tree<FileSystemNode>::TreeIterator tracePath(const vector<string>& folderNameList, bool fromRoot = false);
+	// Return iterator for relative path
 	Tree<FileSystemNode>::TreeIterator relativePathIter(const vector<string>& folderNameList);
+	// Return iterator for absolute path 
 	Tree<FileSystemNode>::TreeIterator absolutePathIter(const vector<string>& folderNameList);
+	// Return iterator for any valid directory path
 	Tree<FileSystemNode>::TreeIterator getDirIter(const string& path);
-public:
-	// Constructor creates file system from pathToDB
-	FileSystem();
-	bool cd(const string& path);
-	string getCurPath();
-	vector<string> getDirFiles(const string& path);
-	// Finds whether a child name is unique in current directory
-	int getChildIndex(const string file_name_type);
 	// Create file in current working dir
 	void createFile(const string& file_name_type, const string& file_name_contents);
+	// Create dir in current working dir
 	void createDir(const string& folder_name);
 	// Removes child of current directory, only if it is an empty directory
 	void removeDir(const string& folder_name, bool shouldBeEmpty);
-	void removeDirPath(const string& path, bool shouldBeEmpty) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), dirName = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(dirName + FILE_TYPE_SEP + DIRECTORY_TYPE_STR);
-			if (i == -1) {
-				cerr << "File not found" << endl;
-			}
-			else {
-				removeDir(dirName, shouldBeEmpty);
-			}
-			cd(pathBefore);
-		}
-
-	}
-	string getMetadataStr(const string& file_name_type);
-	string getMetadataStrPath(const string& path) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		string res = "";
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			if (i == -1) {
-				cerr << "File does not exist";
-				return "";
-			}
-			else {
-				res = getMetadataStr(fileNameType);
-			}
-			cd(pathBefore);
-			return res;
-		}
-		return "";
-	}
+	// Removes file in current working dir
 	void removeFile(const string& file_name_type);
-	void removeFilePath(const string& path) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			if (i == -1) {
-				cerr << "File does not exist";
-			}
-			else {
-				removeFile(fileNameType);
-			}
-			cd(pathBefore);
-		}
-
-	};
+	// Update file in current working dir
+	void updateFile(const string& file_name_type, const string& file_name_contents);
+	// Get metadata string for a file in current dir
+	string getMetadataStr(const string& file_name_type);
+public:
+	FileSystem();
+	// Load filesystem from file onto existing fs instance
 	static bool tryToLoadFS(const string& DBPath, FileSystem& fs);
-	string getFileContents(const string& path) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			string res = "";
-			if (i == -1) {
-				cerr << "File not found" << endl;
-			}
-			else {
-				res = cur.getChild(i).contents;
-			}
-			cd(pathBefore);
-			return res;
-		}
-		return "";
-	}
-	void updateFile(const string& file_name_type, const string& file_name_contents) {
-		int i = getChildIndex(file_name_type);
-		if (i == -1) {
-			cerr << "File does not exist" << endl;
-		}
-		else {
-			FileSystemNode& changed = cur.getChild(i);
-			changed.contents = file_name_contents;
-		}
-	}
-	void updateFilePath(const string& path, const string& file_name_contents) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			if (i == -1) {
-				cerr << "File does not exist";
-			}
-			updateFile(fileNameType, file_name_contents);
-			cd(pathBefore);
-		}
 
-	}
-	bool fileExists(const string& path) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			cd(pathBefore);
-			if (i == -1) {
-				return false;
-			}
-			return true;
-		}
-		return false;
-
-
-	}
-	void createFilePath(const string& path, const string& contents) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(fileNameType);
-			if (i == -1) {
-				createFile(fileNameType, contents);
-			}
-			else {
-				cerr << "File alrady exists" << endl;
-			}
-			cd(pathBefore);
-		}
-	}
-	void createDirPath(const string& path) {
-		string pathBefore = this->getCurPath();
-		int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
-		string newPath = path.substr(0, lastPathSepI + 1), dirName = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
-		if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
-			int i = getChildIndex(dirName + FILE_TYPE_SEP + DIRECTORY_TYPE_STR);
-			if (i == -1) {
-				createDir(dirName);
-			}
-			else {
-				cerr << "Directory alrady exists" << endl;
-			}
-			cd(pathBefore);
-		}
-	}
+	// Change current directory
+	bool cd(const string& path);
+	// get absolute path
+	string getCurPath();
+	// Get list of files for directory
+	vector<string> getDirFiles(const string& path);
+	// Finds whether a child name is unique in current directory
+	int getChildIndex(const string file_name_type);
+	// Removes directory by given path
+	void removeDirPath(const string& path, bool shouldBeEmpty);
+	// Get metadata string for any path
+	string getMetadataStrPath(const string& path);
+	// Removes file by given path
+	void removeFilePath(const string& path);;
+	// Get contents of file by given path
+	string getFileContents(const string& path);
+	// Update file by given file path
+	void updateFilePath(const string& path, const string& file_name_contents);
+	// Does file with given path exist
+	bool fileExists(const string& path);
+	// Is given path a valid directory
+	bool isDir(const string& path);
+	// Copies file by given ogirinal file path and directory in which to copy
+	void copyFile(const string& origPath, const string& copyDir);
+	// Create file by given path and contents
+	void createFilePath(const string& path, const string& contents);
+	// Gets absolute path for path relative to current working dir
+	string getAbsPath(const string& path);
+	// Creates directory by given new directory path
+	void createDirPath(const string& path);
 };
-
-// Extracts data read from DB file
-// Fills treeNodeDataList and parentIndexArray with values taken from file
-
 
 // Extract path of dir names from path string
 
@@ -474,6 +409,7 @@ inline Tree<FileSystemNode>::TreeIterator FileSystem::getDirIter(const string& p
 	}
 }
 
+
 // Constructor creates file system from pathToDB
 
 inline FileSystem::FileSystem() {
@@ -482,6 +418,7 @@ inline FileSystem::FileSystem() {
 	file_count = 0;
 }
 
+// Change current working directory
 inline bool FileSystem::cd(const string& path) {
 	Tree<FileSystemNode>::TreeIterator res = getDirIter(path);
 	if (res.isDetached()) {
@@ -565,7 +502,6 @@ inline void FileSystem::createDir(const string& folder_name) {
 	}
 }
 
-// Removes child of current directory, only if it is an empty directory
 inline void FileSystem::removeDir(const string& folder_name, bool shouldBeEmpty) {
 	int i = getChildIndex(folder_name + FILE_TYPE_SEP + DIRECTORY_TYPE_STR);
 	if (i == -1) {
@@ -593,6 +529,23 @@ inline void FileSystem::removeDir(const string& folder_name, bool shouldBeEmpty)
 	}
 }
 
+inline void FileSystem::removeDirPath(const string& path, bool shouldBeEmpty) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), dirName = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(dirName + FILE_TYPE_SEP + DIRECTORY_TYPE_STR);
+		if (i == -1) {
+			cerr << "File not found" << endl;
+		}
+		else {
+			removeDir(dirName, shouldBeEmpty);
+		}
+		cd(pathBefore);
+	}
+
+}
+
 inline string FileSystem::getMetadataStr(const string& file_name_type) {
 	int i = getChildIndex(file_name_type);
 	if (i == -1) {
@@ -602,6 +555,26 @@ inline string FileSystem::getMetadataStr(const string& file_name_type) {
 	else {
 		return cur.getChild(i).toString();
 	}
+}
+
+inline string FileSystem::getMetadataStrPath(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	string res = "";
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i == -1) {
+			cerr << "File does not exist";
+			return "";
+		}
+		else {
+			res = getMetadataStr(fileNameType);
+		}
+		cd(pathBefore);
+		return res;
+	}
+	return "";
 }
 
 inline void FileSystem::removeFile(const string& file_name_type) {
@@ -614,6 +587,23 @@ inline void FileSystem::removeFile(const string& file_name_type) {
 		file_count--;
 		cur.removeCur();
 	}
+}
+
+inline void FileSystem::removeFilePath(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i == -1) {
+			cerr << "File does not exist";
+		}
+		else {
+			removeFile(fileNameType);
+		}
+		cd(pathBefore);
+	}
+
 }
 
 inline bool FileSystem::tryToLoadFS(const string& DBPath, FileSystem& fs) {
@@ -638,8 +628,164 @@ inline bool FileSystem::tryToLoadFS(const string& DBPath, FileSystem& fs) {
 		return false;
 	}
 }
+
+inline string FileSystem::getFileContents(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i == -1) {
+			i = getChildIndex(fileNameType + FILE_TYPE_SEP + SYMLINK_TYPE_STR);
+		}
+		string res = "";
+		if (i == -1) {
+			cerr << "File not found" << endl;
+		}
+		else {
+			FileSystemNode n = cur.getChild(i);
+			if (n.type == SYMLINK_TYPE_STR) {
+				res = getFileContents(n.contents);
+			}
+			else {
+				res = n.contents;
+			}
+		}
+		cd(pathBefore);
+		return res;
+	}
+	return "";
+}
+
+inline void FileSystem::updateFile(const string& file_name_type, const string& file_name_contents) {
+	int i = getChildIndex(file_name_type);
+	if (i == -1) {
+		cerr << "File does not exist" << endl;
+	}
+	else {
+		FileSystemNode& changed = cur.getChild(i);
+		changed.contents = file_name_contents;
+	}
+}
+
+inline void FileSystem::updateFilePath(const string& path, const string& file_name_contents) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i == -1) {
+			cerr << "File does not exist";
+		}
+		updateFile(fileNameType, file_name_contents);
+		cd(pathBefore);
+	}
+
+}
+
+inline bool FileSystem::fileExists(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		cd(pathBefore);
+		if (i == -1) {
+			return false;
+		}
+		return true;
+	}
+	return false;
+}
+
+inline bool FileSystem::isDir(const string& path) {
+	string pathBefore = this->getCurPath();
+	bool isDir = cd(path);
+	cd(pathBefore);
+	return isDir;
+}
+
+inline void FileSystem::copyFile(const string& origPath, const string& copyDir) {
+	string pathBefore = getCurPath();
+	int lastPathSepI = origPath.find_last_of(PATH_DIR_SEP);
+	string origDir = origPath.substr(0, lastPathSepI + 1), fileNameType = origPath.substr(lastPathSepI + 1, origPath.length() - lastPathSepI);
+	if (origDir == "") {
+		origDir = pathBefore;
+	}
+	if (((lastPathSepI != -1 && isDir(origDir) && cd(origDir)) || lastPathSepI == -1)) {
+		int i = getChildIndex(fileNameType);
+		FileSystemNode copied = cur.getChild(i);
+		if (i != -1 && isDir(copyDir) && cd(copyDir)) {
+			int i = getChildIndex(fileNameType);
+			if (i != -1) {
+				cerr << "File already exists" << endl;
+			}
+			else {
+				// TODO: fix time
+				FileSystemNode added = FileSystemNode(file_count, copied.size, copied.isDir, copied.name, copied.type, 0, 0, copied.contents);
+				cur.addChild(added);
+				file_count++;
+			}
+		}
+		else {
+			cout << "Invalid patameters" << endl;
+		}
+	}
+	cd(pathBefore);
+}
+
+inline void FileSystem::createFilePath(const string& path, const string& contents) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i == -1) {
+			createFile(fileNameType, contents);
+		}
+		else {
+			cerr << "File alrady exists" << endl;
+		}
+		cd(pathBefore);
+	}
+}
+
+inline string FileSystem::getAbsPath(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), fileNameType = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	string res = "";
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(fileNameType);
+		if (i != -1) {
+			res = getCurPath() + fileNameType;
+		}
+		else {
+			cerr << "File does not exist" << endl;
+		}
+	}
+	cd(pathBefore);
+	return res;
+}
+
+inline void FileSystem::createDirPath(const string& path) {
+	string pathBefore = this->getCurPath();
+	int lastPathSepI = path.find_last_of(PATH_DIR_SEP);
+	string newPath = path.substr(0, lastPathSepI + 1), dirName = path.substr(lastPathSepI + 1, path.length() - lastPathSepI);
+	if ((lastPathSepI != -1 && cd(newPath)) || lastPathSepI == -1) {
+		int i = getChildIndex(dirName + FILE_TYPE_SEP + DIRECTORY_TYPE_STR);
+		if (i == -1) {
+			createDir(dirName);
+		}
+		else {
+			cerr << "Directory alrady exists" << endl;
+		}
+		cd(pathBefore);
+	}
+}
+
 inline string FileSystemNode::getFullName() const {
-	return name + (type == DIRECTORY_TYPE_STR ? "" : FILE_TYPE_SEP + type);
+	return name + (type == DIRECTORY_TYPE_STR || type == SYMLINK_TYPE_STR ? "" : FILE_TYPE_SEP + type);
 }
 
 inline string FileSystemNode::toString() const {

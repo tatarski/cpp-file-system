@@ -17,8 +17,4 @@ int main()
 		getline(cin, commandStr);
 		cli.readCommand(commandStr);
 	}
-
-
-//	a.cd("/folder2");
-//	a.cd("/folder2/../folder2/..");
 }

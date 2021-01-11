@@ -155,7 +155,9 @@
     <ClCompile Include="FileSystemCLI.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FileSystem.hpp" />
+    <ClInclude Include="FileSystem.hpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">false</ExcludedFromBuild>
+    </ClInclude>
     <ClInclude Include="Tree.hpp" />
   </ItemGroup>
   <ItemGroup>
