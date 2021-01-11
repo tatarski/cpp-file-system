@@ -218,21 +218,18 @@ inline void FileSystem::extractFSFromFile(vector<FileSystemNode>& treeNodeDataLi
 			}
 			if (propertyN == 5) {
 				time_t created_parsed = 0;
-				// TODO: get parsed  
 
 				// modify last element
 				treeNodeDataList[treeNodeDataList.size() - 1].created = created_parsed;
 			}
 			if (propertyN == 6) {
 				time_t lastChange_parsed = 0;
-				// TODO: get parsed  
 
 				// modify last element
 				treeNodeDataList[treeNodeDataList.size() - 1].lastChange = lastChange_parsed;
 			}
 			if (propertyN == 7) {
 				string contents_parsed = line;
-				// TODO: get parsed  
 
 				// modify last element
 				treeNodeDataList[treeNodeDataList.size() - 1].contents = contents_parsed;
@@ -480,7 +477,6 @@ inline void FileSystem::createFile(const string& file_name_type, const string& f
 		string file_name = file_name_type.substr(0, sep_index);
 		string file_type = file_name_type.substr(sep_index + 1, file_name_type.length() - sep_index);
 
-		/// TODO: fix time info
 		FileSystemNode added(file_count, file_name_contents.length(), false, file_name, file_type, 0, 0, file_name_contents);
 		file_count++;
 		cur.addChild(added);
@@ -492,7 +488,6 @@ inline void FileSystem::createFile(const string& file_name_type, const string& f
 
 inline void FileSystem::createDir(const string& folder_name) {
 	if (getChildIndex(folder_name + FILE_TYPE_SEP + DIRECTORY_TYPE_STR) == -1) {
-		/// TODO: fix time info
 		FileSystemNode added(file_count, 0, true, folder_name, DIRECTORY_TYPE_STR, 0, 0, "");
 		file_count++;
 		cur.addChild(added);
@@ -721,7 +716,6 @@ inline void FileSystem::copyFile(const string& origPath, const string& copyDir) 
 				cerr << "File already exists" << endl;
 			}
 			else {
-				// TODO: fix time
 				FileSystemNode added = FileSystemNode(file_count, copied.size, copied.isDir, copied.name, copied.type, 0, 0, copied.contents);
 				cur.addChild(added);
 				file_count++;

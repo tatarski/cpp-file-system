@@ -57,6 +57,7 @@ public:
 		void removeCur();
 		// Push child to current node children
 		void addChild(T data);
+		// Returns whether iterator holds a reference to a tree
 		bool isDetached();
 	};
 private:
