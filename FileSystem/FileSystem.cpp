@@ -15,6 +15,6 @@ int main()
 		string commandStr;
 		cout << "$ ";
 		getline(cin, commandStr);
-		cli.readCommand(commandStr);
+		cli.readCommand(commandStr, shouldContinue);
 	}
 }

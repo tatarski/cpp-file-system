@@ -57,7 +57,10 @@ const string MAN_STR =   "MANUAL: \n PATHS: \n"
 "Create a symlink to a file with a given path and new name.	\n"
 "															\n"
 "# stat <path_to_file>[*n]									\n"
-"Print metadata information for files.						\n";
+"Print metadata information for files.						\n"
+"															\n"
+"# exit														\n"
+"Exit the application										\n";
 // Filesystem is Tree<FileSystemNode>
 struct FileSystemNode {
 	unsigned int id;
